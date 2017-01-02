@@ -124,7 +124,10 @@ mdl::tmem_t * mdl::qgdb_connect::recv_session_info(bool & error) {
 boost::uint8_t mdl::qgdb_connect::start()
 {
     this-> set_connect_sstate(sevice_state::__is_running);
-   
+    
+    /* you could say its a command line interpreter, but its poorly made
+    * and it need updating and cleaning.
+    */ 
     clinterp cline;
     
     /* the base instructer. this just makes it easer to change.
@@ -144,22 +147,35 @@ boost::uint8_t mdl::qgdb_connect::start()
 
     bool is_logged_in = false, e = false;
 
+    /* get the config file for the client from the server */
     tmem_t * config = this-> receive_config(e);
+
     config-> analyze_stack_memory(e);
     
     printf("dumping config stack.\n");
 
     config-> dump_stack_memory();
-   
+
+    /* store the motd in a char so we can write it to the terminal
+    */   
     char * motd = config-> get_mem_value("motd", e);
 
+    /* write the motd to the terminal */
     cline.write_to_term(motd);
+
+    /* free the memory that the motd used */
     std::free(motd);
 
+    /* hear we will be able to store session info / login 
+    * e.g. are we logged in or not ? and many other stuff
+    */
     tmem_t * session_info = nullptr;
 
     do
     {
+        // NOTE: remove this as we dont need this, also
+        // make tagged_memory 'create_mem_tag' accessabal without
+        // needing to create a object of the class
         tagged_memory o(BUFFER_LENGTH, {':', ';', '~'}, true);
         bool error = false;
 
@@ -186,6 +202,10 @@ boost::uint8_t mdl::qgdb_connect::start()
         
         if (cline.is_base_instruct(base_instruct))
         {
+            /* NOTE: all other commands must go after the login one as 
+            * the client need access before its allows to access the other
+            * commands, if not the read / write might become out of sync.
+            */
             if (cline.is_bi_argument("login") && is_logged_in == false) {
                 char * username = cline.get_bi_arg_value("uname");
                 char * password = cline.get_bi_arg_value("passwd");

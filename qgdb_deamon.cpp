@@ -1,6 +1,10 @@
 # include "qgdb_deamon.hpp"
 # include <iostream>
 # include <cstdio>
+/*
+NOTE: im not using async
+*/
+
 boost::uint8_t mdl::qgdb_deamon::initialize(connection_info cinfo)
 {
     static boost::asio::ip::tcp::endpoint __endpoint(
@@ -88,10 +92,12 @@ boost::uint8_t mdl::qgdb_deamon::start(boost::thread ** __t)
    
     bool e = false; 
     tmem_t session_info(128, {':', ';', '~'}, true);
+    
+    /* NOTE: fore some resion add_mem_tag dose not work 
+    * before analyzeing.
+    */
     session_info.dump_into_stack(":allowed_access~no;");
     session_info.analyze_stack_memory(e);
-
-    //session_info.add_mem_tag("allowed_access", "no", 0, e);
 
     do
     {
@@ -99,8 +105,6 @@ boost::uint8_t mdl::qgdb_deamon::start(boost::thread ** __t)
 
         if (this-> accept_incomming(socket, acceptor) == 1) return 1; 
         
-        bool is_logged_in = false, first_loop = false;
-
         printf("a client has connected to the database\n");    
         this-> send_client_config(socket);
     
@@ -139,20 +143,21 @@ boost::uint8_t mdl::qgdb_deamon::start(boost::thread ** __t)
 
                 printf("password was %s\n", s.is_logged_in == false? "incorrect" : "correct");
             }
-                if (s.is_logged_in == false || s.just_logged_in) {
-                    if (s.is_logged_in == false) {
-                        std::free(username);
-                        std::free(password);
-                    }
-
-                    std::free(packet);
-                    if (s.just_logged_in) {
-                        s.just_logged_in = false;
-                    }
-                    
-                    continue;
+            
+            if (s.is_logged_in == false || s.just_logged_in) {
+                if (s.is_logged_in == false) {
+                    std::free(username);
+                    std::free(password);
                 }
-            //}
+
+                std::free(packet);
+
+                if (s.just_logged_in)
+                    s.just_logged_in = false;
+                                    
+                continue;
+            }
+            
            
             printf("user %s logged into the database.\n", s.username);
 
@@ -240,6 +245,7 @@ void mdl::qgdb_deamon::terminal(boost::thread ** __t) {
 
         if (cl.is_base_instruct("qgdb")) {
             if (cl.is_bi_argument("stop")) {
+                // NOTE: does not work
                 printf("stopping server.\n");
                 this-> set_deamon_sstate(sevice_state::__not_running);
                 printf("res = %d\n", this-> get_deamon_sstate());
@@ -277,9 +283,6 @@ void mdl::qgdb_deamon::terminal(boost::thread ** __t) {
                 std::free(var_name);
                 std::free(var_value);
             }
-
-                    
-
         }     
     } while(this-> is_demaon_sstate(sevice_state::__is_running));
 

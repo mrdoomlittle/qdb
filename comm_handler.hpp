@@ -14,7 +14,7 @@
 namespace mdl { class comm_handler
 {
     public:
-    void send_pk_header(boost::asio::ip::tcp::socket & __socket, std::size_t __body_len, bool & __error) {
+    void send_pk_header(boost::asio::ip::tcp::socket & __socket, std::size_t __body_len, bool & __error, boost::system::error_code & __error_code) {
         tmem_t pk_header(PK_HEADER_LEN, {':', ';', '~'}, true);
      
         std::string body_len = std::to_string(__body_len);
@@ -31,7 +31,7 @@ namespace mdl { class comm_handler
             header_buffer[i] = header_stack[i];
         }
 
-        boost::asio::write(__socket, boost::asio::buffer(header_buffer, PK_HEADER_LEN));
+        boost::asio::write(__socket, boost::asio::buffer(header_buffer, PK_HEADER_LEN), __error_code);
 
         std::free(header_buffer);
         std::free(header_stack);
@@ -42,6 +42,11 @@ namespace mdl { class comm_handler
         std::memset(header_buffer, '\0', (PK_HEADER_LEN + 1) * sizeof(char));
 
         boost::asio::read(__socket, boost::asio::buffer(header_buffer, PK_HEADER_LEN), __error_code);
+
+        if (__error_code == boost::asio::error::eof) {
+            __error = true;
+            return nullptr;
+        }
 
         tmem_t * pk_header = new tmem_t(PK_HEADER_LEN, {':', ';', '~'}, true);
 
@@ -57,6 +62,7 @@ namespace mdl { class comm_handler
     void transmit_packet(boost::asio::ip::tcp::socket & __socket, tmem_t * __pk_body)
     {
         bool error = false;
+        boost::system::error_code error_code;
 
         /* dump the packet body stack memory so we can send it using asio::write
         * as it only takes char * or std::vector i think?
@@ -69,7 +75,7 @@ namespace mdl { class comm_handler
         /* send the packet header, this will contain the body length and
         * other stuff if needed.
         */
-        this-> send_pk_header(__socket, body_stack_len, error);
+        this-> send_pk_header(__socket, body_stack_len, error, error_code);
         
         printf("sending packet body: %s\n", pk_body_stack);
         boost::asio::write(__socket, boost::asio::buffer(pk_body_stack, body_stack_len));
@@ -81,6 +87,7 @@ namespace mdl { class comm_handler
     */
     void transmit_packet(boost::asio::ip::tcp::socket & __socket, char const * __pk_body) {
         bool error = false;     
+        boost::system::error_code error_code;
 
         /* store the length of the body as we will be needing it later */
         std::size_t body_len = std::strlen(__pk_body);
@@ -88,7 +95,7 @@ namespace mdl { class comm_handler
         /* send the packet header, this will contain the body length and
         * other stuff if needed.
         */
-        this-> send_pk_header(__socket, body_len, error);
+        this-> send_pk_header(__socket, body_len, error, error_code);
 
         printf("sending packet body: %s\n", __pk_body);
         boost::asio::write(__socket, boost::asio::buffer(__pk_body, body_len));
@@ -102,7 +109,8 @@ namespace mdl { class comm_handler
         * because it will be needed when receiveing it.
         */
         tmem_t * pk_header = this-> recv_pk_header(__socket, __error, error_code);
-    
+        if (__error == true) return nullptr;   
+ 
         /* extract the body length from the packet header
         */
         std::size_t body_len = atoi(pk_header-> get_mem_value("body_length", __error, 0, true));
@@ -121,6 +129,14 @@ namespace mdl { class comm_handler
         boost::asio::read(__socket, boost::asio::buffer(body_buffer, body_len), error_code);
         printf("receiving packet body: %s\n", body_buffer);
 
+        if (error_code == boost::asio::error::eof) {
+            __error = true;
+            std::free(body_buffer);
+            std::free(pk_header);
+
+            return nullptr;
+        }
+
         /* dump the contents of the body buffer into the tmem_t(pk_body)
         */
         pk_body-> dump_into_stack(body_buffer);
@@ -132,10 +148,6 @@ namespace mdl { class comm_handler
         std::free(body_buffer);
         std::free(pk_header); 
 
-        if (error_code == boost::asio::error::eof) { 
-            __error = true; 
-            return nullptr; 
-        }
         return pk_body;
     }
 } ;
