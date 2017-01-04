@@ -1,1 +1,7 @@
-:db_config~;:client_config~:motd~welcome;;:server_config~;
+:db_config~;
+
+:client_config~
+:term_rbuff_len~30720;
+:motd~Welcome to the QGDB\n;;
+
+:server_config~;

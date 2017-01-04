@@ -98,7 +98,7 @@ boost::uint8_t mdl::qgdb_deamon::start(boost::thread ** __t)
     */
     session_info.dump_into_stack(":allowed_access~no;");
     session_info.analyze_stack_memory(e);
-
+    bool error = false;
     do
     {
         boost::asio::ip::tcp::socket socket(this-> io_service);
@@ -109,7 +109,7 @@ boost::uint8_t mdl::qgdb_deamon::start(boost::thread ** __t)
         this-> send_client_config(socket);
      
         for (;;) {
-            bool error = false;
+            error = false;
 
             this-> send_session_info(&session_info, socket);
          
@@ -210,7 +210,7 @@ boost::uint8_t mdl::qgdb_deamon::start(boost::thread ** __t)
             std::free(val);
             std::free(packet);       
         }
-
+        session_info.set_mem_value("allowed_access", "no", error);
         lmanager.end_session();
 //        this-> db_memory-> save_mem_stack_to_file("db_memory.db"); 
 

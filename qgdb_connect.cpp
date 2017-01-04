@@ -72,12 +72,10 @@ char const * __var_value, tagged_memory & __tm, char * ex_space) {
     }
 
     this-> transmit_packet((* this-> socket), buffer);
-//    boost::asio::write((* this-> socket), boost::asio::buffer(buffer, strlen(buffer)));
 
     if (__tm.compare_strings(__var_type, "get") == true) {
         char * incomming = static_cast<char *>(malloc(BUFFER_LENGTH * sizeof(char)));
         memset(incomming, '\0', BUFFER_LENGTH * sizeof(char));
-        std::size_t icomm_buff_len = 0;
 
         boost::system::error_code error__;
         bool e = false;
@@ -86,8 +84,7 @@ char const * __var_value, tagged_memory & __tm, char * ex_space) {
 
         incomming = t-> dump_stack_memory(true);
         std::free(t);
-        //icomm_buff_len = this-> socket-> read_some(boost::asio::buffer(incomming, BUFFER_LENGTH), error__);
-
+      
         return incomming;       
     }
 
@@ -135,8 +132,9 @@ mdl::tmem_t * mdl::qgdb_connect::recv_session_info(bool & error) {
     return this-> receive_packet((* this-> socket), error);
 }
 
-boost::uint8_t mdl::qgdb_connect::start()
+boost::uint8_t mdl::qgdb_connect::start(bool debug)
 {
+    this-> debug = debug;
     this-> set_connect_sstate(sevice_state::__is_running);
     
     /* you could say its a command line interpreter, but its poorly made
@@ -185,12 +183,25 @@ boost::uint8_t mdl::qgdb_connect::start()
     */
     tmem_t * session_info = nullptr;
 
+    /* get the read buffer length for the term from the config
+    * that the server sent.
+    */
+    char * rbuff_len = config-> get_mem_value("term_rbuff_len", e);
+
+    /* change it to a int.
+    */
+    std::size_t rbl = atoi(rbuff_len);
+
+    /* free the char memory that was used.
+    */
+    std::free(rbuff_len);
+
     do
     {
         // NOTE: remove this as we dont need this, also
         // make tagged_memory 'create_mem_tag' accessabal without
         // needing to create a object of the class
-        tagged_memory o(BUFFER_LENGTH, {':', '~', ';'}, true);
+        tagged_memory o(BUFFER_LENGTH, {':', '~', ';'}, this-> debug);
         bool error = false;
 
         session_info = this-> recv_session_info(error); 
@@ -206,7 +217,7 @@ boost::uint8_t mdl::qgdb_connect::start()
 
         std::free(access_state);
         relog:
-        char * term_input = cline.read_from_term(1048, true);
+        char * term_input = cline.read_from_term(rbl, true);
         cline.filter(true);
    
         std::free(term_input);
@@ -221,8 +232,8 @@ boost::uint8_t mdl::qgdb_connect::start()
             * commands, if not the read / write might become out of sync.
             */
             if (cline.is_bi_argument("login") && is_logged_in == false) {
-                char * username = cline.get_bi_arg_value("uname");
-                char * password = cline.get_bi_arg_value("passwd");
+                char * username = cline.get_bi_arg_value("--uname");
+                char * password = cline.get_bi_arg_value("--passwd");
 
                 char * outgoing = this-> build_login_block(username, password, o);
 
@@ -245,16 +256,16 @@ boost::uint8_t mdl::qgdb_connect::start()
             if (cline.is_bi_argument("add") || cline.is_bi_argument("set")) {
                 /* get the argument value thats named 'name'
                 */
-                char * mem_name = cline.get_bi_arg_value("name");
+                char * mem_name = cline.get_bi_arg_value("--name");
 
                 /* get the argument value thats named 'value'
                 */
-                char * mem_value = cline.get_bi_arg_value("value");
+                char * mem_value = cline.get_bi_arg_value("--value");
 
                 char * mem_space = nullptr;
 
                 if (cline.is_bi_argument("add")) 
-                    mem_space = cline.get_bi_arg_value("space");
+                    mem_space = cline.get_bi_arg_value("--space");
 
                 /* as we dont know what the terminal message is
                 * we have to declear it manulay.
@@ -271,7 +282,7 @@ boost::uint8_t mdl::qgdb_connect::start()
                 std::free(mem_value);
            
             } else if (cline.is_bi_argument("get")) {
-                char * mem_name = cline.get_bi_arg_value("name");
+                char * mem_name = cline.get_bi_arg_value("--name");
             
                 char * incomming = this-> db_var("get", mem_name, "", o);
 
@@ -302,5 +313,5 @@ int main(int arg_c, char * arg_v[])
     cinfo._ipv4_address = arg_v[1];
     mdl::qgdb_connect qgdb_connect(io_service);
     qgdb_connect.initialize(cinfo);
-    qgdb_connect.start();
+    qgdb_connect.start(atoi(arg_v[3]));
 }

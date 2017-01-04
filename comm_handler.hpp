@@ -4,62 +4,110 @@
 # include <boost/cstdlib.hpp>
 # include <boost/asio.hpp>
 # include <vector>
-#include <sstream>
+# include <sstream>
 # include <tagged_memory.hpp>
+
 /* length of the buffer in chars/ bytes */
-# define PACKET_HEAD_LEN 1028
-# define BUFFER_LENGTH 2048
-# define PK_HEADER_LEN 1024
-# define PK_BODY_LEN 1024
+# define BUFFER_LENGTH 30720
+# define PK_HEADER_LEN 127
+
+/* NOTE: need to change the naming of this
+* as its extra length on top of the body length.
+*/
+# define PK_BODY_LEN 30720
 namespace mdl { class comm_handler
 {
     public:
-    void send_pk_header(boost::asio::ip::tcp::socket & __socket, std::size_t __body_len, bool & __error, boost::system::error_code & __error_code) {
-        tmem_t pk_header(PK_HEADER_LEN, {':', '~', ';'}, true);
-     
+    void send_pk_header(boost::asio::ip::tcp::socket & __socket, std::size_t __body_len, bool & __error, boost::system::error_code & __error_code, bool debug = false) {
+        /* we are only using this to add and change stuff to make 
+        * editing the header and what it contains easer.
+        */
+        tmem_t pk_header(PK_HEADER_LEN, {':', '~', ';'}, debug);
+    
+        /* convert the body length(int) to a std string 
+        * later this will allows us to turn it into a c string.
+        */ 
         std::string body_len = std::to_string(__body_len);
 
+        /* add a tag that will allow the client to know the length
+        * of the body.
+        */
         pk_header.add_mem_tag("body_length", body_len.c_str(), 0, __error); 
 
+        /*
+        *
+        * NOTE: if anything else needs adding to the heade do it hear.
+        *
+        */
+
+        /* as tmem_t is not a char type, we need somwhere to dump the stack
+        * so we can pass it thru the asio write function.
+        */
         char * header_buffer = static_cast<char *>(std::malloc((PK_HEADER_LEN + 1) * sizeof(char)));
         std::memset(header_buffer, '\0', (PK_HEADER_LEN + 1) * sizeof(char));
 
+        /* get the contents of the header memory stack
+        */
         char * header_stack = pk_header.dump_stack_memory(true);
 
+        /* put the contents of the header memory stack into the header buffer.
+        */
         for (std::size_t i = 0 ; i != PK_HEADER_LEN; i ++) {
+            /* check if the array of char's has ended */
             if (header_stack[i] == '\0') break;
+
             header_buffer[i] = header_stack[i];
         }
 
+        /* write the data to the socket.
+        */
         boost::asio::write(__socket, boost::asio::buffer(header_buffer, PK_HEADER_LEN), __error_code);
 
+        /* free the memory that we used.
+        */
         std::free(header_buffer);
         std::free(header_stack);
     }
 
-    tmem_t * recv_pk_header(boost::asio::ip::tcp::socket & __socket, bool & __error, boost::system::error_code & __error_code) {
+    tmem_t * recv_pk_header(boost::asio::ip::tcp::socket & __socket, bool & __error, boost::system::error_code & __error_code, bool debug = false) {
+        /* create some space where we can store the data we get from the client.
+        */
         char * header_buffer = static_cast<char *>(std::malloc((PK_HEADER_LEN + 1) * sizeof(char)));
         std::memset(header_buffer, '\0', (PK_HEADER_LEN + 1) * sizeof(char));
 
+        /* read the socket.
+        */
         boost::asio::read(__socket, boost::asio::buffer(header_buffer, PK_HEADER_LEN), __error_code);
 
+        /* check if there's any error's
+        */
         if (__error_code == boost::asio::error::eof) {
             __error = true;
             return nullptr;
         }
 
-        tmem_t * pk_header = new tmem_t(PK_HEADER_LEN, {':', '~', ';'}, true);
+        /* this is where we will store it for interpretation
+        */
+        tmem_t * pk_header = new tmem_t(PK_HEADER_LEN, {':', '~', ';'}, debug);
 
+        /* dump the data we got into the stack
+        */
         pk_header-> dump_into_stack(header_buffer);
 
+        /* analyze the stack.
+        */
         pk_header-> analyze_stack_memory(__error);
 
+        /* free any memory we used.
+        */
         std::free(header_buffer);
 
+        /* return the header as a tmem_t
+        */
         return pk_header;
     }
 
-    void transmit_packet(boost::asio::ip::tcp::socket & __socket, tmem_t * __pk_body)
+    void transmit_packet(boost::asio::ip::tcp::socket & __socket, tmem_t * __pk_body, bool debug = false)
     {
         bool error = false;
         boost::system::error_code error_code;
@@ -75,7 +123,7 @@ namespace mdl { class comm_handler
         /* send the packet header, this will contain the body length and
         * other stuff if needed.
         */
-        this-> send_pk_header(__socket, body_stack_len, error, error_code);
+        this-> send_pk_header(__socket, body_stack_len, error, error_code, debug);
         
         printf("sending packet body: %s\n", pk_body_stack);
         boost::asio::write(__socket, boost::asio::buffer(pk_body_stack, body_stack_len));
@@ -85,7 +133,7 @@ namespace mdl { class comm_handler
 
     /* this just allows me to transmit data e.g. transmit_packet(":example~value;");
     */
-    void transmit_packet(boost::asio::ip::tcp::socket & __socket, char const * __pk_body) {
+    void transmit_packet(boost::asio::ip::tcp::socket & __socket, char const * __pk_body, bool debug = false) {
         bool error = false;     
         boost::system::error_code error_code;
 
@@ -95,20 +143,20 @@ namespace mdl { class comm_handler
         /* send the packet header, this will contain the body length and
         * other stuff if needed.
         */
-        this-> send_pk_header(__socket, body_len, error, error_code);
+        this-> send_pk_header(__socket, body_len, error, error_code, debug);
 
         printf("sending packet body: %s\n", __pk_body);
         boost::asio::write(__socket, boost::asio::buffer(__pk_body, body_len));
     }
 
-    tmem_t * receive_packet(boost::asio::ip::tcp::socket & __socket, bool & __error)
+    tmem_t * receive_packet(boost::asio::ip::tcp::socket & __socket, bool & __error, bool debug = false)
     { 
         boost::system::error_code error_code;
 
         /* get the packet header as we need to know the length of the body,
         * because it will be needed when receiveing it.
         */
-        tmem_t * pk_header = this-> recv_pk_header(__socket, __error, error_code);
+        tmem_t * pk_header = this-> recv_pk_header(__socket, __error, error_code, debug);
         if (__error == true) return nullptr;   
  
         /* extract the body length from the packet header
@@ -117,7 +165,7 @@ namespace mdl { class comm_handler
          
         /* this is where the packet body will be stored when finished
         */
-        tmem_t * pk_body = new tmem_t(PK_BODY_LEN, {':', '~', ';'}, true);
+        tmem_t * pk_body = new tmem_t((body_len + PK_BODY_LEN), {':', '~', ';'}, debug);
     
         /* this is where we will store the packet body when reading the data, after that it will
         * be dumped into the pk_body stack.
@@ -145,9 +193,13 @@ namespace mdl { class comm_handler
         */
         pk_body-> analyze_stack_memory(__error);
 
+        /* free the memory we used.
+        */
         std::free(body_buffer);
         std::free(pk_header); 
 
+        /* return the body
+        */
         return pk_body;
     }
 } ;

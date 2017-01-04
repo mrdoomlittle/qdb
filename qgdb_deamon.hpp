@@ -9,7 +9,7 @@
 # include "login_manager.hpp"
 # include <tagged_memory.hpp>
 # include "connection_info.hpp"
-# define DB_MEM_LENGTH 2048
+# define DB_MEM_LENGTH 30720
 namespace mdl { class qgdb_deamon : public comm_handler
 {
     public:
@@ -49,7 +49,6 @@ namespace mdl { class qgdb_deamon : public comm_handler
     private: 
     tmem_t * db_memory;
     tmem_t * db_config;
-
 
     tmem_t * client_config;
     tmem_t * server_config;

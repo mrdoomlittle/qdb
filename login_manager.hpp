@@ -54,6 +54,7 @@ namespace mdl { class login_manager
         if (! result) {
             printf("the username %s does not exists in the user database.\n", __uname);
             __error = true;
+
             return false;
         }
 

@@ -13,7 +13,7 @@ namespace mdl { class qgdb_connect : public comm_handler
     : io_service(__io_service) { }
 
     boost::uint8_t initialize(connection_info cinfo);
-    boost::uint8_t start();
+    boost::uint8_t start(bool debug);
 
     bool is_connect_sstate(boost::uint8_t __connect_sstate) {
         return this-> connect_sstate == __connect_sstate? true : false;
@@ -36,6 +36,7 @@ namespace mdl { class qgdb_connect : public comm_handler
     tmem_t * receive_config(bool & error);
   
     private:
+    bool debug = false;
 
     boost::asio::ip::tcp::socket * socket;
     boost::asio::io_service & io_service;
