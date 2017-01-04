@@ -25,12 +25,17 @@ boost::uint8_t mdl::qgdb_connect::initialize(connection_info cinfo)
     return 0;
 }
 
-char *  mdl::qgdb_connect::db_var(char const * __var_type, char const * __var_name, char const * __var_value, tagged_memory & __tm) {
+char *  mdl::qgdb_connect::db_var(char const * __var_type, char const * __var_name, 
+char const * __var_value, tagged_memory & __tm, char * ex_space) {
     char * vt_tag = __tm.create_mem_tag("tm", __var_type);
     char * vn_tag = __tm.create_mem_tag("var_name", __var_name);
     char * vv_tag = nullptr;
+    char * vs_tag = nullptr;
     if (__tm.compare_strings(__var_type, "get") == false) 
         vv_tag = __tm.create_mem_tag("var_value", __var_value);
+
+    if (__tm.compare_strings(__var_type, "add"))
+        vs_tag = __tm.create_mem_tag("var_space", ex_space);
 
     std::size_t length = 0;
     if (__tm.compare_strings(__var_type, "get") == false)
@@ -59,6 +64,13 @@ char *  mdl::qgdb_connect::db_var(char const * __var_type, char const * __var_na
         }
     }
 
+    if (__tm.compare_strings(__var_type, "add")) {
+        for (std::size_t o = 0 ; o != strlen(vs_tag) ; o ++) {
+            buffer[i] = vs_tag[o];
+            i++;
+        }
+    }
+
     this-> transmit_packet((* this-> socket), buffer);
 //    boost::asio::write((* this-> socket), boost::asio::buffer(buffer, strlen(buffer)));
 
@@ -72,7 +84,7 @@ char *  mdl::qgdb_connect::db_var(char const * __var_type, char const * __var_na
         tmem_t * t = this-> receive_packet((* this-> socket), e);
 
 
-        incomming = t-> dump_stack_memory();
+        incomming = t-> dump_stack_memory(true);
         std::free(t);
         //icomm_buff_len = this-> socket-> read_some(boost::asio::buffer(incomming, BUFFER_LENGTH), error__);
 
@@ -83,6 +95,8 @@ char *  mdl::qgdb_connect::db_var(char const * __var_type, char const * __var_na
     std::free(vn_tag);
     if (__tm.compare_strings(__var_type, "get") == false)
         std::free(vv_tag);
+    if (__tm.compare_strings(__var_type, "add"))
+        std::free(vs_tag);
 
     return nullptr;
 }
@@ -176,7 +190,7 @@ boost::uint8_t mdl::qgdb_connect::start()
         // NOTE: remove this as we dont need this, also
         // make tagged_memory 'create_mem_tag' accessabal without
         // needing to create a object of the class
-        tagged_memory o(BUFFER_LENGTH, {':', ';', '~'}, true);
+        tagged_memory o(BUFFER_LENGTH, {':', '~', ';'}, true);
         bool error = false;
 
         session_info = this-> recv_session_info(error); 
@@ -221,7 +235,7 @@ boost::uint8_t mdl::qgdb_connect::start()
             }
 
             if (cline.is_bi_argument("login") == false && is_logged_in == false) { 
-                printf("sorry by other commands will not work unless to login to the database.\n"); 
+                printf("sorry but other commands will not work unless you are logged in to the database.\n"); 
                 goto relog; 
             }
 
@@ -237,11 +251,16 @@ boost::uint8_t mdl::qgdb_connect::start()
                 */
                 char * mem_value = cline.get_bi_arg_value("value");
 
+                char * mem_space = nullptr;
+
+                if (cline.is_bi_argument("add")) 
+                    mem_space = cline.get_bi_arg_value("space");
+
                 /* as we dont know what the terminal message is
                 * we have to declear it manulay.
                 */
                 if (cline.is_bi_argument("add"))
-                    this-> db_var("add", mem_name, mem_value, o);
+                    this-> db_var("add", mem_name, mem_value, o, mem_space);
 
                 if (cline.is_bi_argument("set"))
                     this-> db_var("set", mem_name, mem_value, o);

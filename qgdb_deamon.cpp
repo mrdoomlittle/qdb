@@ -12,7 +12,7 @@ boost::uint8_t mdl::qgdb_deamon::initialize(connection_info cinfo)
 
     this-> endpoint = &__endpoint;
 
-    this-> db_memory = new tmem_t(DB_MEM_LENGTH, {':', ';', '~'}, true);
+    this-> db_memory = new tmem_t(DB_MEM_LENGTH, {':', '~', ';'}, true);
 
     /* load database memory into stack so we can use it later
     */
@@ -25,9 +25,9 @@ boost::uint8_t mdl::qgdb_deamon::initialize(connection_info cinfo)
     * .db config
     */
 
-    this-> db_config = new tmem_t(DB_MEM_LENGTH, {':', ';', '~'}, false);
-    this-> client_config = new tmem_t(DB_MEM_LENGTH, {':', ';', '~'}, false);
-    this-> server_config = new tmem_t(DB_MEM_LENGTH, {':', ';', '~'}, false);
+    this-> db_config = new tmem_t(DB_MEM_LENGTH, {':', '~', ';'}, false);
+    this-> client_config = new tmem_t(DB_MEM_LENGTH, {':', '~', ';'}, false);
+    this-> server_config = new tmem_t(DB_MEM_LENGTH, {':', '~', ';'}, false);
     
     bool error = false;
     this-> db_memory-> analyze_stack_memory(error);
@@ -91,7 +91,7 @@ boost::uint8_t mdl::qgdb_deamon::start(boost::thread ** __t)
     login_manager::session & s = lmanager.get_session();
    
     bool e = false; 
-    tmem_t session_info(128, {':', ';', '~'}, true);
+    tmem_t session_info(128, {':', '~', ';'}, true);
     
     /* NOTE: fore some resion add_mem_tag dose not work 
     * before analyzeing.
@@ -107,7 +107,7 @@ boost::uint8_t mdl::qgdb_deamon::start(boost::thread ** __t)
         
         printf("a client has connected to the database\n");    
         this-> send_client_config(socket);
-    
+     
         for (;;) {
             bool error = false;
 
@@ -116,13 +116,15 @@ boost::uint8_t mdl::qgdb_deamon::start(boost::thread ** __t)
             /* recive the incomming packet from client.
             */ 
             tagged_memory * packet = this-> receive_packet(socket, error);
-        
+
+
+            //return 0;        
             /* if there was a error well receiving the packet or somthing else,
             * stop any further action
             */ 
             if (error == true) break;
             std::cout << "________________________________" << "\n";
-            char * si = session_info.dump_stack_memory();
+            char * si = session_info.dump_stack_memory(true);
             std::free(si);
             char * username;
             char * password;
@@ -170,19 +172,20 @@ boost::uint8_t mdl::qgdb_deamon::start(boost::thread ** __t)
                 /* get the memory name and its value, as we need it. */
                 char * mem_name = packet-> get_mem_value("var_name", error, 0, true);
                 char * mem_value = packet-> get_mem_value("var_value", error, 0, true);
-
+                char * mem_space = packet-> get_mem_value("var_space", error, 0, true);
                 /* add a memory tag to the stack. */
-                this-> db_memory-> add_mem_tag(mem_name, mem_value, 0, error);
+                this-> db_memory-> add_mem_tag(mem_name, mem_value, atoi(mem_space), error);
              
                 printf("var name: %s, var value: %s\n", mem_name, mem_value);
                 /* free the memory used to store the name and val of var */
                 std::free(mem_name);
                 std::free(mem_value);
+                std::free(mem_space);
             } else if (packet-> compare_strings(val, "set")) {     
                 printf("%s has called for db to set a var.\n", s.username);
                 char * mem_name = packet-> get_mem_value("var_name", error, 0, true);
                 char * mem_value = packet-> get_mem_value("var_value", error, 0, true);
-
+             
                 this-> db_memory-> set_mem_value(mem_name, mem_value, error);        
 
                 printf("var name: %s, var value: %s\n", mem_name, mem_value);
@@ -202,12 +205,14 @@ boost::uint8_t mdl::qgdb_deamon::start(boost::thread ** __t)
                 std::free(mem_value);
             } 
 
+
+            this-> db_memory-> dump_stack_memory();
             std::free(val);
             std::free(packet);       
         }
 
         lmanager.end_session();
-        this-> db_memory-> save_mem_stack_to_file("db_memory.db"); 
+//        this-> db_memory-> save_mem_stack_to_file("db_memory.db"); 
 
     } while (this-> is_demaon_sstate(sevice_state::__is_running));
 

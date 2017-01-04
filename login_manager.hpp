@@ -1,7 +1,7 @@
 # ifndef __login__manager__hpp
 # define __login__manager__hpp
 # include <openssl/sha.h>
-
+# include <base64.h>
 # define MAX_UNAME_LEN 16
 # define MAX_PASSWD_LEN 16
 # define DEFAULT_DB_LEN 128
@@ -12,7 +12,7 @@ namespace mdl { class login_manager
     login_manager(unsigned int __db_len = DEFAULT_DB_LEN) {
         /* args for the seporators can be left empty as we are going to use the defaults
         */
-        static tmem_t _user_db(__db_len, {':', ';', '~'}, true);
+        static tmem_t _user_db(__db_len, {':', '~', ';'}, true);
 
         // load it into memory for analyzing 
         _user_db.load_mem_stack_from_file("user_db.qg_db");
@@ -68,6 +68,28 @@ namespace mdl { class login_manager
         */
         char * passwd = this-> user_db-> get_mem_value(__uname, error); 
 
+        char * base64_str = nullptr;
+       
+        printf("Hello Testing\n");
+
+        std::size_t b64_len = Base64decode_len(passwd);
+        base64_str = static_cast<char *>(malloc(b64_len));
+        memset(base64_str, '\0', b64_len);
+
+        Base64decode(base64_str, passwd);
+
+        std::free(passwd); 
+    
+        passwd = static_cast<char *>(malloc(b64_len));
+        memset(passwd, '\0', b64_len);    
+
+        for (std::size_t i = 0; i != b64_len; i ++) {
+            printf("setting %c\n", base64_str[i]);
+            passwd[i] = base64_str[i]; 
+        }
+        
+        std::free(base64_str);
+
         // NOTE: i dont know if this might work in the long run
         unsigned char * password = reinterpret_cast<unsigned char *>(passwd);
 
@@ -75,14 +97,15 @@ namespace mdl { class login_manager
         */
         unsigned int passwd_hash_len = std::strlen(reinterpret_cast<char *>(this-> passwd_hash)); 
         unsigned int passwd_db_hash_len = std::strlen(passwd);
-        
+
+/*        
         for (std::size_t i = 0; i != passwd_db_hash_len; i ++) {
             if (passwd[i] == '1') passwd[i] = ';';
             if (passwd[i] == '2') passwd[i] = ':';
             if (passwd[i] == '3') passwd[i] = '~';
             if (passwd[i] == '4') passwd[i] = ',';
         }
-
+*/
         for (std::size_t i = 0; i != passwd_db_hash_len; i ++)
             printf("%u - ", password[i]);
 

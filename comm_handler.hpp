@@ -15,7 +15,7 @@ namespace mdl { class comm_handler
 {
     public:
     void send_pk_header(boost::asio::ip::tcp::socket & __socket, std::size_t __body_len, bool & __error, boost::system::error_code & __error_code) {
-        tmem_t pk_header(PK_HEADER_LEN, {':', ';', '~'}, true);
+        tmem_t pk_header(PK_HEADER_LEN, {':', '~', ';'}, true);
      
         std::string body_len = std::to_string(__body_len);
 
@@ -24,7 +24,7 @@ namespace mdl { class comm_handler
         char * header_buffer = static_cast<char *>(std::malloc((PK_HEADER_LEN + 1) * sizeof(char)));
         std::memset(header_buffer, '\0', (PK_HEADER_LEN + 1) * sizeof(char));
 
-        char * header_stack = pk_header.dump_stack_memory();
+        char * header_stack = pk_header.dump_stack_memory(true);
 
         for (std::size_t i = 0 ; i != PK_HEADER_LEN; i ++) {
             if (header_stack[i] == '\0') break;
@@ -48,7 +48,7 @@ namespace mdl { class comm_handler
             return nullptr;
         }
 
-        tmem_t * pk_header = new tmem_t(PK_HEADER_LEN, {':', ';', '~'}, true);
+        tmem_t * pk_header = new tmem_t(PK_HEADER_LEN, {':', '~', ';'}, true);
 
         pk_header-> dump_into_stack(header_buffer);
 
@@ -67,7 +67,7 @@ namespace mdl { class comm_handler
         /* dump the packet body stack memory so we can send it using asio::write
         * as it only takes char * or std::vector i think?
         */     
-        char * pk_body_stack = __pk_body-> dump_stack_memory();
+        char * pk_body_stack = __pk_body-> dump_stack_memory(true);
 
         /* store the length of the body as we will be needing it later */
         std::size_t body_stack_len = std::strlen(pk_body_stack);
@@ -117,7 +117,7 @@ namespace mdl { class comm_handler
          
         /* this is where the packet body will be stored when finished
         */
-        tmem_t * pk_body = new tmem_t(PK_BODY_LEN, {':', ';', '~'}, true);
+        tmem_t * pk_body = new tmem_t(PK_BODY_LEN, {':', '~', ';'}, true);
     
         /* this is where we will store the packet body when reading the data, after that it will
         * be dumped into the pk_body stack.

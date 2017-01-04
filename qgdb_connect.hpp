@@ -27,7 +27,8 @@ namespace mdl { class qgdb_connect : public comm_handler
         return this-> connect_sstate;
     }
 
-    char * db_var(char const * __var_type, char const * __var_name, char const * __var_value, tagged_memory & __tm);
+    char * db_var(char const * __var_type, char const * __var_name, 
+        char const * __var_value, tagged_memory & __tm, char * ex_space = nullptr);
 
     char * build_login_block(char * __uname, char * __passwd, tagged_memory & __tm);
 

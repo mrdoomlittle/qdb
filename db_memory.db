@@ -1,1 +1,1 @@
-:db_config~EMPTY;:client_config~:motd~Welcome to QG Database\ncommands\n -> qgdb add [name= / value=]\n -> qgdb set [name= / value=]\n -> qgdb get [name=]\n;;:server_config~EMPTY;
+:db_config~;:client_config~:motd~welcome;;:server_config~;
