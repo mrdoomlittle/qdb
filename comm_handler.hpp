@@ -8,13 +8,13 @@
 # include <tagged_memory.hpp>
 
 /* length of the buffer in chars/ bytes */
-# define BUFFER_LENGTH 30720
+# define BUFFER_LENGTH 2048
 # define PK_HEADER_LEN 127
 
 /* NOTE: need to change the naming of this
 * as its extra length on top of the body length.
 */
-# define PK_BODY_LEN 30720
+# define PK_BODY_LEN 2048
 namespace mdl { class comm_handler
 {
     public:
@@ -62,7 +62,7 @@ namespace mdl { class comm_handler
         /* write the data to the socket.
         */
         boost::asio::write(__socket, boost::asio::buffer(header_buffer, PK_HEADER_LEN), __error_code);
-
+        if (__error_code == boost::asio::error::eof) __error = true;
         /* free the memory that we used.
         */
         std::free(header_buffer);
@@ -78,10 +78,11 @@ namespace mdl { class comm_handler
         /* read the socket.
         */
         boost::asio::read(__socket, boost::asio::buffer(header_buffer, PK_HEADER_LEN), __error_code);
-
+      
         /* check if there's any error's
         */
         if (__error_code == boost::asio::error::eof) {
+            std::free(header_buffer);
             __error = true;
             return nullptr;
         }
@@ -107,9 +108,8 @@ namespace mdl { class comm_handler
         return pk_header;
     }
 
-    void transmit_packet(boost::asio::ip::tcp::socket & __socket, tmem_t * __pk_body, bool debug = false)
+    void transmit_packet(boost::asio::ip::tcp::socket & __socket, tmem_t * __pk_body, bool debug, bool& __error)
     {
-        bool error = false;
         boost::system::error_code error_code;
 
         /* dump the packet body stack memory so we can send it using asio::write
@@ -123,18 +123,20 @@ namespace mdl { class comm_handler
         /* send the packet header, this will contain the body length and
         * other stuff if needed.
         */
-        this-> send_pk_header(__socket, body_stack_len, error, error_code, debug);
-        
+        this-> send_pk_header(__socket, body_stack_len, __error, error_code, debug);
+        if (__error) goto end;
+ 
         printf("sending packet body: %s\n", pk_body_stack);
-        boost::asio::write(__socket, boost::asio::buffer(pk_body_stack, body_stack_len));
+        boost::asio::write(__socket, boost::asio::buffer(pk_body_stack, body_stack_len), error_code);
+        if (error_code == boost::asio::error::eof) __error = true; 
 
+        end:
         std::free(pk_body_stack);
     }
 
     /* this just allows me to transmit data e.g. transmit_packet(":example~value;");
     */
-    void transmit_packet(boost::asio::ip::tcp::socket & __socket, char const * __pk_body, bool debug = false) {
-        bool error = false;     
+    void transmit_packet(boost::asio::ip::tcp::socket & __socket, char const * __pk_body, bool debug, bool& __error) {
         boost::system::error_code error_code;
 
         /* store the length of the body as we will be needing it later */
@@ -143,10 +145,12 @@ namespace mdl { class comm_handler
         /* send the packet header, this will contain the body length and
         * other stuff if needed.
         */
-        this-> send_pk_header(__socket, body_len, error, error_code, debug);
+        this-> send_pk_header(__socket, body_len, __error, error_code, debug);
+        if (__error) return;
 
         printf("sending packet body: %s\n", __pk_body);
-        boost::asio::write(__socket, boost::asio::buffer(__pk_body, body_len));
+        boost::asio::write(__socket, boost::asio::buffer(__pk_body, body_len), error_code);
+        if (error_code == boost::asio::error::eof) __error = true;
     }
 
     tmem_t * receive_packet(boost::asio::ip::tcp::socket & __socket, bool & __error, bool debug = false)

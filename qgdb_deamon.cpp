@@ -1,6 +1,7 @@
 # include "qgdb_deamon.hpp"
 # include <iostream>
 # include <cstdio>
+# include "conn_handler.hpp"
 /*
 NOTE: im not using async
 */
@@ -68,14 +69,14 @@ void mdl::qgdb_deamon::load_server_config(bool & __error) {
 }
 
 void mdl::qgdb_deamon::send_client_config(
-    boost::asio::ip::tcp::socket & __socket) {
-    this-> transmit_packet(__socket, this-> client_config);
+    boost::asio::ip::tcp::socket & __socket, bool& __error) {
+    this-> transmit_packet(__socket, this-> client_config, false, __error);
 }
 
 void mdl::qgdb_deamon::send_session_info(tmem_t * __session_info,
-    boost::asio::ip::tcp::socket & __socket) {
+    boost::asio::ip::tcp::socket & __socket, bool& __error) {
 
-    this-> transmit_packet(__socket, __session_info);
+    this-> transmit_packet(__socket, __session_info, false, __error);
 }
 
 boost::uint8_t mdl::qgdb_deamon::start(boost::thread ** __t)
@@ -84,135 +85,15 @@ boost::uint8_t mdl::qgdb_deamon::start(boost::thread ** __t)
     
     this-> set_deamon_sstate(sevice_state::__is_running);
 
-    /* login manager. this will manage the user login stuff e.g. password usernames etc
-    */
-    login_manager lmanager;
-
-    login_manager::session & s = lmanager.get_session();
-   
-    bool e = false; 
-    tmem_t session_info(128, {':', '~', ';'}, true);
-    
-    /* NOTE: fore some resion add_mem_tag dose not work 
-    * before analyzeing.
-    */
-    session_info.dump_into_stack(":allowed_access~no;");
-    session_info.analyze_stack_memory(e);
-    bool error = false;
+    conn_handler a; 
     do
     {
-        boost::asio::ip::tcp::socket socket(this-> io_service);
+        boost::asio::ip::tcp::socket * sock = new boost::asio::ip::tcp::socket(this-> io_service);
 
+        boost::asio::ip::tcp::socket & socket = *sock;
         if (this-> accept_incomming(socket, acceptor) == 1) return 1; 
-        
-        printf("a client has connected to the database\n");    
-        this-> send_client_config(socket);
-     
-        for (;;) {
-            error = false;
-
-            this-> send_session_info(&session_info, socket);
-         
-            /* recive the incomming packet from client.
-            */ 
-            tagged_memory * packet = this-> receive_packet(socket, error);
-
-
-            //return 0;        
-            /* if there was a error well receiving the packet or somthing else,
-            * stop any further action
-            */ 
-            if (error == true) break;
-            std::cout << "________________________________" << "\n";
-            char * si = session_info.dump_stack_memory(true);
-            std::free(si);
-            char * username;
-            char * password;
-
-            if (s.is_logged_in == false)
-            {           
-                username = packet-> get_mem_value("username", error, 0, true);      
-                password = packet-> get_mem_value("password", error, 0, true);
-
-                printf("checking username and password\n");
-                if (lmanager.check_login_data(username, password, error))
-                    lmanager.start_session(username, password); 
-                
-                std::cout << "uname: " << username << ", passwd: " << password << std::endl;
-
-                if (s.is_logged_in)
-                    session_info.set_mem_value("allowed_access", "yes", e);
-
-                printf("password was %s\n", s.is_logged_in == false? "incorrect" : "correct");
-            }
-            
-            if (s.is_logged_in == false || s.just_logged_in) {
-                if (s.is_logged_in == false) {
-                    std::free(username);
-                    std::free(password);
-                }
-
-                std::free(packet);
-
-                if (s.just_logged_in)
-                    s.just_logged_in = false;
-                                    
-                continue;
-            }
-            
-           
-            printf("user %s logged into the database.\n", s.username);
-
-            char * val = packet-> get_mem_value("tm", error, 0, true);
-
-            printf("terminal command: %s\n", val);
-
-            if (packet-> compare_strings(val, "add")) {
-                printf("%s has called for db to add a var.\n", s.username);
-                /* get the memory name and its value, as we need it. */
-                char * mem_name = packet-> get_mem_value("var_name", error, 0, true);
-                char * mem_value = packet-> get_mem_value("var_value", error, 0, true);
-                char * mem_space = packet-> get_mem_value("var_space", error, 0, true);
-                /* add a memory tag to the stack. */
-                this-> db_memory-> add_mem_tag(mem_name, mem_value, atoi(mem_space), error);
-             
-                printf("var name: %s, var value: %s\n", mem_name, mem_value);
-                /* free the memory used to store the name and val of var */
-                std::free(mem_name);
-                std::free(mem_value);
-                std::free(mem_space);
-            } else if (packet-> compare_strings(val, "set")) {     
-                printf("%s has called for db to set a var.\n", s.username);
-                char * mem_name = packet-> get_mem_value("var_name", error, 0, true);
-                char * mem_value = packet-> get_mem_value("var_value", error, 0, true);
-             
-                this-> db_memory-> set_mem_value(mem_name, mem_value, error);        
-
-                printf("var name: %s, var value: %s\n", mem_name, mem_value);
-                /* free the memory used to store the name and val of var */
-                std::free(mem_name);
-                std::free(mem_value);
-            } else if (packet-> compare_strings(val, "get")) {
-                printf("%s has called for db to get a var.\n", s.username);
-                char * mem_name = packet-> get_mem_value("var_name", error, 0, true);
-                char * mem_value = this-> db_memory-> get_mem_value(mem_name, error, 0, true);
-  
-                this-> transmit_packet(socket, mem_value);
-
-                printf("var name: %s, var value: %s\n", mem_name, mem_value);
-                /* free the memory used to store the name and val of var */
-                std::free(mem_name);
-                std::free(mem_value);
-            } 
-
-
-            this-> db_memory-> dump_stack_memory();
-            std::free(val);
-            std::free(packet);       
-        }
-        session_info.set_mem_value("allowed_access", "no", error);
-        lmanager.end_session();
-//        this-> db_memory-> save_mem_stack_to_file("db_memory.db"); 
+        printf("adding a connection.\n");    
+        a.add_connection(sock, this); 
 
     } while (this-> is_demaon_sstate(sevice_state::__is_running));
 

@@ -70,8 +70,8 @@ char const * __var_value, tagged_memory & __tm, char * ex_space) {
             i++;
         }
     }
-
-    this-> transmit_packet((* this-> socket), buffer);
+    bool err = false;
+    this-> transmit_packet((* this-> socket), buffer, false, err);
 
     if (__tm.compare_strings(__var_type, "get") == true) {
         char * incomming = static_cast<char *>(malloc(BUFFER_LENGTH * sizeof(char)));
@@ -238,7 +238,7 @@ boost::uint8_t mdl::qgdb_connect::start(bool debug)
                 char * outgoing = this-> build_login_block(username, password, o);
 
 
-                this-> transmit_packet((* this-> socket), outgoing);
+                this-> transmit_packet((* this-> socket), outgoing, false, error);
               
                 std::free(username);
                 std::free(password);

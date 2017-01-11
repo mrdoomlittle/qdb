@@ -38,21 +38,21 @@ namespace mdl { class qgdb_deamon : public comm_handler
 
     void terminal(boost::thread ** __t);
     void send_client_config(
-        boost::asio::ip::tcp::socket & __socket);
+        boost::asio::ip::tcp::socket & __socket, bool& __error);
     void send_session_info(tmem_t * __session_info,
-    boost::asio::ip::tcp::socket & __socket);
+    boost::asio::ip::tcp::socket & __socket, bool& __error);
 
     void load_db_config(bool & __error);
     void load_client_config(bool & __error);
     void load_server_config(bool & __error);
      
-    private: 
+   // private: 
     tmem_t * db_memory;
     tmem_t * db_config;
 
     tmem_t * client_config;
     tmem_t * server_config;
- 
+    private:
     enum sevice_state : boost::uint8_t { __is_running, __not_running };
     boost::uint8_t deamon_sstate = sevice_state::__not_running;
 
