@@ -10,12 +10,14 @@ namespace mdl { class login_manager
 {
     public:
     login_manager(unsigned int __db_len = DEFAULT_DB_LEN) {
+        tagged_memory::eoptions_t options;   
+
         /* args for the seporators can be left empty as we are going to use the defaults
         */
-        static tmem_t _user_db(__db_len, {':', '~', ';'}, true);
+        static tmem_t _user_db(__db_len, {}, options, true);
 
         // load it into memory for analyzing 
-        _user_db.load_mem_stack_from_file("user_db.qg_db");
+        _user_db.load_mem_stack_from_file("", "user_db.qg_db");
         bool error = false;
 
         _user_db.analyze_stack_memory(error);

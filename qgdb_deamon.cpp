@@ -12,12 +12,14 @@ boost::uint8_t mdl::qgdb_deamon::initialize(connection_info cinfo)
         boost::asio::ip::address_v4::from_string(cinfo._ipv4_address), cinfo._port_number);
 
     this-> endpoint = &__endpoint;
+    
+    tagged_memory::eoptions_t options;
 
-    this-> db_memory = new tmem_t(DB_MEM_LENGTH, {':', '~', ';'}, true);
+    this-> db_memory = new tmem_t(DB_MEM_LENGTH, {}, options, true);
 
     /* load database memory into stack so we can use it later
     */
-    this-> db_memory-> load_mem_stack_from_file("db_memory.db");
+    this-> db_memory-> load_mem_stack_from_file("", "db_memory.qg_db");
 
     /*
     * database layout:
@@ -26,9 +28,9 @@ boost::uint8_t mdl::qgdb_deamon::initialize(connection_info cinfo)
     * .db config
     */
 
-    this-> db_config = new tmem_t(DB_MEM_LENGTH, {':', '~', ';'}, false);
-    this-> client_config = new tmem_t(DB_MEM_LENGTH, {':', '~', ';'}, false);
-    this-> server_config = new tmem_t(DB_MEM_LENGTH, {':', '~', ';'}, false);
+    this-> db_config = new tmem_t(DB_MEM_LENGTH, {}, options, false);
+    this-> client_config = new tmem_t(DB_MEM_LENGTH, {}, options, false);
+    this-> server_config = new tmem_t(DB_MEM_LENGTH, {}, options, false);
     
     bool error = false;
     this-> db_memory-> analyze_stack_memory(error);

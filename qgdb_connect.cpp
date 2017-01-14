@@ -125,11 +125,11 @@ char * mdl::qgdb_connect::build_login_block(char * __uname, char * __passwd, tag
 }
 
 mdl::tmem_t * mdl::qgdb_connect::receive_config(bool & error) {
-    return this-> receive_packet((* this-> socket), error);
+    return this-> receive_packet((* this-> socket), error, true);
 }
 
 mdl::tmem_t * mdl::qgdb_connect::recv_session_info(bool & error) {
-    return this-> receive_packet((* this-> socket), error);
+    return this-> receive_packet((* this-> socket), error, true);
 }
 
 boost::uint8_t mdl::qgdb_connect::start(bool debug)
@@ -196,12 +196,14 @@ boost::uint8_t mdl::qgdb_connect::start(bool debug)
     */
     std::free(rbuff_len);
 
+    tagged_memory::eoptions_t options;
+
     do
     {
         // NOTE: remove this as we dont need this, also
         // make tagged_memory 'create_mem_tag' accessabal without
         // needing to create a object of the class
-        tagged_memory o(BUFFER_LENGTH, {':', '~', ';'}, this-> debug);
+        tagged_memory o(BUFFER_LENGTH, {}, options, this-> debug);
         bool error = false;
 
         session_info = this-> recv_session_info(error); 
