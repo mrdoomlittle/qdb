@@ -44,7 +44,7 @@ boost::uint8_t mdl::qgdb_deamon::initialize(connection_info cinfo)
 }
 
 void mdl::qgdb_deamon::load_db_config(bool & __error) {
-    char * db_config = this-> db_memory-> get_mem_value("db_config", __error);
+    char * db_config = this-> db_memory-> get_mem_value("db_config", null_idc, __error);
 
     this-> db_config-> dump_into_stack(db_config);
     this-> db_config-> analyze_stack_memory(__error);
@@ -53,7 +53,7 @@ void mdl::qgdb_deamon::load_db_config(bool & __error) {
 }
 
 void mdl::qgdb_deamon::load_client_config(bool & __error) {
-    char * client_config = this-> db_memory-> get_mem_value("client_config", __error);
+    char * client_config = this-> db_memory-> get_mem_value("client_config", null_idc, __error);
 
     this-> client_config-> dump_into_stack(client_config);
     this-> client_config-> analyze_stack_memory(__error);
@@ -62,7 +62,7 @@ void mdl::qgdb_deamon::load_client_config(bool & __error) {
 }
 
 void mdl::qgdb_deamon::load_server_config(bool & __error) {
-    char * server_config = this-> db_memory-> get_mem_value("server_config", __error);
+    char * server_config = this-> db_memory-> get_mem_value("server_config", null_idc, __error);
 
     this-> server_config-> dump_into_stack(server_config);
     this-> server_config-> analyze_stack_memory(__error);
@@ -162,7 +162,7 @@ void mdl::qgdb_deamon::terminal(boost::thread ** __t) {
             else if (cl.is_bi_argument("get")) {
                 char * var_name = cl.get_bi_arg_value("name");
                 bool error = false;
-                char * var_value = this-> db_memory-> get_mem_value(var_name, error, 0, true);
+                char * var_value = this-> db_memory-> get_mem_value(var_name, null_idc, error, 0, true);
 
                 printf("resault from database is %s\n", var_value);
 

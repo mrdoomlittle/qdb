@@ -69,7 +69,7 @@ namespace mdl { class login_manager
         /* retreve the password from the database, so we can use it to compare
         * with the existing one we have recived from the user.
         */
-        char * passwd = this-> user_db-> get_mem_value(__uname, error); 
+        char * passwd = this-> user_db-> get_mem_value(__uname, mdl::null_idc, error); 
 
         char * base64_str = nullptr;
        

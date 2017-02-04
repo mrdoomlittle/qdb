@@ -170,7 +170,7 @@ namespace mdl { class comm_handler
 
         /* extract the body length from the packet header
         */
-        std::size_t body_len = atoi(pk_header-> get_mem_value("body_length", __error, 0, true));
+        std::size_t body_len = atoi(pk_header-> get_mem_value("body_length", null_idc, __error, 0, true));
 
         tagged_memory::extra_options_t options;
 

@@ -53,8 +53,8 @@ namespace mdl { class conn_handler {
 
             if (!curr_session.is_logged_in)
             {
-                username = packet-> get_mem_value("username", error, 0, true);
-                password = packet-> get_mem_value("password", error, 0, true);
+                username = packet-> get_mem_value("username", null_idc, error, 0, true);
+                password = packet-> get_mem_value("password", null_idc, error, 0, true);
 
                 printf("checking username and password for user.\n");
                 if (lmanager.check_login_data(username, password, error))
@@ -84,16 +84,16 @@ namespace mdl { class conn_handler {
 
             printf("user %s has logged into the database.\n", curr_session.username);
 
-            char * op_name = packet-> get_mem_value("tm", error, 0, true);
+            char * op_name = packet-> get_mem_value("tm", null_idc, error, 0, true);
 
             printf("operation name: %s\n", op_name);
 
             if (packet-> compare_strings(op_name, "add")) {
                 printf("%s has called for the db to add a pice of memory.\n", curr_session.username);
                 /* get the memory name and its value, as we need it. */
-                char * mem_name = packet-> get_mem_value("var_name", error, 0, true);
-                char * mem_value = packet-> get_mem_value("var_value", error, 0, true);
-                char * mem_space = packet-> get_mem_value("var_space", error, 0, true);
+                char * mem_name = packet-> get_mem_value("var_name", null_idc, error, 0, true);
+                char * mem_value = packet-> get_mem_value("var_value", null_idc, error, 0, true);
+                char * mem_space = packet-> get_mem_value("var_space", null_idc, error, 0, true);
                 /* add a memory tag to the stack. */
                 _this-> db_memory-> add_mem_tag(mem_name, mem_value, atoi(mem_space), error);
 
@@ -104,8 +104,8 @@ namespace mdl { class conn_handler {
                 std::free(mem_space);
             } else if (packet-> compare_strings(op_name, "set")) {
                 printf("%s has called for the db to set a pice of memory.\n", curr_session.username);
-                char * mem_name = packet-> get_mem_value("var_name", error, 0, true);
-                char * mem_value = packet-> get_mem_value("var_value", error, 0, true);
+                char * mem_name = packet-> get_mem_value("var_name", null_idc, error, 0, true);
+                char * mem_value = packet-> get_mem_value("var_value", null_idc, error, 0, true);
 
                 _this-> db_memory-> set_mem_value(mem_name, mem_value, null_idc, error);
 
@@ -115,8 +115,8 @@ namespace mdl { class conn_handler {
                 std::free(mem_value);
             } else if (packet-> compare_strings(op_name, "get")) {
                 printf("%s has called for the db to get a pice of memory.\n", curr_session.username);
-                char * mem_name = packet-> get_mem_value("var_name", error, 0, true);
-                char * mem_value = _this-> db_memory-> get_mem_value(mem_name, error, 0, true);
+                char * mem_name = packet-> get_mem_value("var_name", null_idc, error, 0, true);
+                char * mem_value = _this-> db_memory-> get_mem_value(mem_name, null_idc, error, 0, true);
 
                 _this-> transmit_packet(socket, mem_value, false, error);
 

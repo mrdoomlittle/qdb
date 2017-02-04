@@ -179,7 +179,7 @@ boost::uint8_t mdl::qgdb_connect::start(bool debug)
 
     /* store the motd in a char so we can write it to the terminal
     */   
-    char * motd = config-> get_mem_value("motd", e);
+    char * motd = config-> get_mem_value("motd", null_idc, e);
 
     /* write the motd to the terminal */
     cline.write_to_term(motd);
@@ -195,7 +195,7 @@ boost::uint8_t mdl::qgdb_connect::start(bool debug)
     /* get the read buffer length for the term from the config
     * that the server sent.
     */
-    char * rbuff_len = config-> get_mem_value("term_rbuff_len", e);
+    char * rbuff_len = config-> get_mem_value("term_rbuff_len", null_idc, e);
 
     /* change it to a int.
     */
@@ -219,7 +219,7 @@ boost::uint8_t mdl::qgdb_connect::start(bool debug)
         printf("dumping session stack.\n");
         session_info-> dump_stack_memory();
 
-        char * access_state = session_info-> get_mem_value("allowed_access", error, 0, true);
+        char * access_state = session_info-> get_mem_value("allowed_access", null_idc, error, 0, true);
         
         if (session_info-> compare_strings(access_state, "no")) 
             is_logged_in = false;
