@@ -132,6 +132,15 @@ mdl::tmem_t * mdl::qgdb_connect::recv_session_info(bool & error) {
     return this-> receive_packet((* this-> socket), error, true);
 }
 
+void mdl::qgdb_connect::login(char * __username, char * __password, tmem_t & __tm) {
+    bool error = false;
+    char * outgoing = this-> build_login_block(__username, __password, __tm);
+
+    this-> transmit_packet((* this-> socket), outgoing, false, error);
+
+    std::free(outgoing);
+}
+
 boost::uint8_t mdl::qgdb_connect::start(bool debug)
 {
     this-> debug = debug;
@@ -196,7 +205,7 @@ boost::uint8_t mdl::qgdb_connect::start(bool debug)
     */
     std::free(rbuff_len);
 
-    tagged_memory::eoptions_t options;
+    tagged_memory::extra_options_t options;
 
     do
     {
@@ -299,9 +308,7 @@ boost::uint8_t mdl::qgdb_connect::start(bool debug)
 
     return 0;
 }
-
-
-
+/*
 int main(int arg_c, char * arg_v[])
 {
     if (arg_c < 3) {
@@ -317,3 +324,4 @@ int main(int arg_c, char * arg_v[])
     qgdb_connect.initialize(cinfo);
     qgdb_connect.start(atoi(arg_v[3]));
 }
+*/

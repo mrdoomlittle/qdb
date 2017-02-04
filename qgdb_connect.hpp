@@ -30,6 +30,24 @@ namespace mdl { class qgdb_connect : public comm_handler
     char * db_var(char const * __var_type, char const * __var_name, 
         char const * __var_value, tagged_memory & __tm, char * ex_space = nullptr);
 
+    void login(char * __username, char * __password, tmem_t & __tm);
+
+    void add(char const * __mem_name, char const * __mem_value, std::size_t __ex_space, tagged_memory & __tm) {
+        std::string st = std::to_string(__ex_space);
+
+        char * c = const_cast<char *>(st.c_str());
+
+        this-> db_var("add", __mem_name, __mem_value, __tm, c);
+    }
+
+    char * get(char const * __mem_name, tagged_memory & __tm) {
+        return this-> db_var("get", __mem_name, nullptr, __tm, nullptr);
+    }
+    
+    void set(char const * __mem_name, char const * __mem_value, tagged_memory & __tm) {
+        this-> db_var("set", __mem_name, __mem_value, __tm, nullptr);
+    }
+
     char * build_login_block(char * __uname, char * __passwd, tagged_memory & __tm);
 
     tmem_t * recv_session_info(bool & error);

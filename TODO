@@ -1,1 +1,2 @@
 ->	clean up the code and rethink conn_handler as its badly made
+-> update tagged_memory functions in qgdb.

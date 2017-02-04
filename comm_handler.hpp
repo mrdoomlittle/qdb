@@ -9,7 +9,7 @@
 
 /* length of the buffer in chars/ bytes */
 # define BUFFER_LENGTH 2048
-# define PK_HEADER_LEN 127
+# define PK_HEADER_LEN 64
 
 /* NOTE: need to change the naming of this
 * as its extra length on top of the body length.
@@ -19,7 +19,7 @@ namespace mdl { class comm_handler
 {
     public:
     void send_pk_header(boost::asio::ip::tcp::socket & __socket, std::size_t __body_len, bool & __error, boost::system::error_code & __error_code, bool debug = false) {
-        tagged_memory::eoptions_t options;
+        tagged_memory::extra_options_t options;
 
         /* we are only using this to add and change stuff to make
         * editing the header and what it contains easer.
@@ -65,6 +65,7 @@ namespace mdl { class comm_handler
         */
         boost::asio::write(__socket, boost::asio::buffer(header_buffer, PK_HEADER_LEN), __error_code);
         if (__error_code == boost::asio::error::eof) __error = true;
+
         /* free the memory that we used.
         */
         std::free(header_buffer);
@@ -89,7 +90,7 @@ namespace mdl { class comm_handler
             return nullptr;
         }
 
-        tagged_memory::eoptions_t options;
+        tagged_memory::extra_options_t options;
 
         /* this is where we will store it for interpretation
         */
@@ -171,7 +172,7 @@ namespace mdl { class comm_handler
         */
         std::size_t body_len = atoi(pk_header-> get_mem_value("body_length", __error, 0, true));
 
-        tagged_memory::eoptions_t options;
+        tagged_memory::extra_options_t options;
 
         /* this is where the packet body will be stored when finished
         */

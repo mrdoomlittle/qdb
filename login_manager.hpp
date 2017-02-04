@@ -10,7 +10,7 @@ namespace mdl { class login_manager
 {
     public:
     login_manager(unsigned int __db_len = DEFAULT_DB_LEN) {
-        tagged_memory::eoptions_t options;   
+        tagged_memory::extra_options_t options;   
 
         /* args for the seporators can be left empty as we are going to use the defaults
         */

@@ -12,10 +12,10 @@ boost::uint8_t mdl::qgdb_deamon::initialize(connection_info cinfo)
         boost::asio::ip::address_v4::from_string(cinfo._ipv4_address), cinfo._port_number);
 
     this-> endpoint = &__endpoint;
-    
-    tagged_memory::eoptions_t options;
 
-    this-> db_memory = new tmem_t(DB_MEM_LENGTH, {}, options, true);
+    tagged_memory::extra_options_t extra_options;
+
+    this-> db_memory = new tmem_t(DB_MEM_LENGTH, {}, extra_options, true);
 
     /* load database memory into stack so we can use it later
     */
@@ -28,15 +28,15 @@ boost::uint8_t mdl::qgdb_deamon::initialize(connection_info cinfo)
     * .db config
     */
 
-    this-> db_config = new tmem_t(DB_MEM_LENGTH, {}, options, false);
-    this-> client_config = new tmem_t(DB_MEM_LENGTH, {}, options, false);
-    this-> server_config = new tmem_t(DB_MEM_LENGTH, {}, options, false);
-    
+    this-> db_config = new tmem_t(DB_MEM_LENGTH, {}, extra_options, false);
+    this-> client_config = new tmem_t(DB_MEM_LENGTH, {}, extra_options, false);
+    this-> server_config = new tmem_t(DB_MEM_LENGTH, {}, extra_options, false);
+
     bool error = false;
+
     this-> db_memory-> analyze_stack_memory(error);
 
     this-> load_db_config(error);
-    
     this-> load_client_config(error);
     this-> load_server_config(error);
 
@@ -84,23 +84,27 @@ void mdl::qgdb_deamon::send_session_info(tmem_t * __session_info,
 boost::uint8_t mdl::qgdb_deamon::start(boost::thread ** __t)
 {
     boost::asio::ip::tcp::acceptor acceptor(this-> io_service, (*this-> endpoint));
-    
+
     this-> set_deamon_sstate(sevice_state::__is_running);
 
-    conn_handler a; 
+    conn_handler connection;
+
     do
     {
         boost::asio::ip::tcp::socket * sock = new boost::asio::ip::tcp::socket(this-> io_service);
 
         boost::asio::ip::tcp::socket & socket = *sock;
-        if (this-> accept_incomming(socket, acceptor) == 1) return 1; 
-        printf("adding a connection.\n");    
-        a.add_connection(sock, this); 
+
+        if (this-> accept_incomming(socket, acceptor) == 1) return 1;
+
+        printf("adding a connection.\n");
+
+        connection.add_connection(sock, this);
 
     } while (this-> is_demaon_sstate(sevice_state::__is_running));
 
     if (this-> is_demaon_sstate(sevice_state::__not_running)) {
-        pthread_cancel((* __t)-> native_handle()); 
+        pthread_cancel((* __t)-> native_handle());
     }
 
     return 0;
@@ -111,9 +115,9 @@ boost::uint8_t mdl::qgdb_deamon::accept_incomming(
     boost::asio::ip::tcp::acceptor & __acceptor)
 {
     /* accept incomming connection
-    */ 
+    */
     __acceptor.accept(__socket);
-   
+
     return 0;
 }
 
@@ -123,7 +127,7 @@ void mdl::qgdb_deamon::terminal(boost::thread ** __t) {
 
     cl.add_base_instruct("qgdb");
     cl.add_bi_argument("qgdb", "stop");
-   
+
     printf("Welcome to QGDB. if you need help type 'help'\n");
     do
     {
@@ -132,21 +136,15 @@ void mdl::qgdb_deamon::terminal(boost::thread ** __t) {
         std::free(tmp);
 
         if (cl.is_base_instruct("qgdb")) {
-            if (cl.is_bi_argument("stop")) {
-                // NOTE: does not work
-                printf("stopping server.\n");
-                this-> set_deamon_sstate(sevice_state::__not_running);
-                printf("res = %d\n", this-> get_deamon_sstate());
-            }
-            else if (cl.is_bi_argument("help")) {
+            if (cl.is_bi_argument("help")) {
                 printf("stop [no args]\nadd [name=, value=]\nset [name=, value=]\nget [name=]\n");
-            }   
+            }
             else if (cl.is_bi_argument("add")) {
                 char * var_name = cl.get_bi_arg_value("name");
                 char * var_value = cl.get_bi_arg_value("value");
 
                 bool error = false;
-                this-> db_memory-> add_mem_tag(var_name, var_value, 0, error); 
+                this-> db_memory-> add_mem_tag(var_name, var_value, 0, error);
 
                 std::free(var_name);
                 std::free(var_value);
@@ -156,7 +154,7 @@ void mdl::qgdb_deamon::terminal(boost::thread ** __t) {
                 char * var_value = cl.get_bi_arg_value("value");
 
                 bool error = false;
-                this-> db_memory-> set_mem_value(var_name, var_value, error); 
+                this-> db_memory-> set_mem_value(var_name, var_value, null_idc, error);
 
                 std::free(var_name);
                 std::free(var_value);
@@ -171,11 +169,11 @@ void mdl::qgdb_deamon::terminal(boost::thread ** __t) {
                 std::free(var_name);
                 std::free(var_value);
             }
-        }     
+        }
     } while(this-> is_demaon_sstate(sevice_state::__is_running));
 
     if (this-> is_demaon_sstate(sevice_state::__not_running)) {
-    
+
         pthread_cancel((* __t)-> native_handle());
     }
 
@@ -189,18 +187,18 @@ int main (int arg_c, char * arg_v [])
     }
 
     boost::asio::io_service io_service;
-  
+
     mdl::connection_info cinfo;
     cinfo._port_number = 21299;
     cinfo._ipv4_address = arg_v[1];
     mdl::qgdb_deamon qgdb_deamon(io_service);
-  
-    qgdb_deamon.initialize(cinfo); 
+
+    qgdb_deamon.initialize(cinfo);
 
     boost::thread * t1;
     t1 = new boost::thread(boost::bind(&mdl::qgdb_deamon::start, &qgdb_deamon, &t1));
     boost::thread * t2;
-    t2 = new boost::thread(boost::bind(&mdl::qgdb_deamon::terminal, &qgdb_deamon, &t2));   
+    t2 = new boost::thread(boost::bind(&mdl::qgdb_deamon::terminal, &qgdb_deamon, &t2));
     t1-> join();
     t2-> join();
 }
