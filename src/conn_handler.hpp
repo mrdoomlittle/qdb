@@ -4,6 +4,9 @@
 # include <boost/cstdint.hpp>
 # include <boost/asio.hpp>
 # include "qgdb_server.hpp"
+# include <serializer.hpp>
+# include "client_config_t.hpp"
+# include <cstdio>
 namespace mdl { namespace qgdb { class conn_handler
 {
 	public:

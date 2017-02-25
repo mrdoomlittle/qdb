@@ -15,7 +15,9 @@ boost::int8_t mdl::qgdb_server::begin() {
 	do {
 		boost::asio::ip::tcp::socket *sock = new boost::asio::ip::tcp::socket(this-> io_service);
 
+		printf("waiting for connections.\n");
 		acceptor.accept(*sock);
+		printf("client has connected to database. addr: %s\n", sock-> remote_endpoint().address().to_string().c_str());
 
 		conn_handler.add(sock, this);
 
@@ -25,6 +27,14 @@ boost::int8_t mdl::qgdb_server::begin() {
 
 
 int main(int argc, char const *argv[]) {
+	boost::asio::io_service io_service;
+	mdl::qgdb_server qgdb_server(io_service);
 
+	mdl::conn_info_t conn_info = {
+		.portno = 21299,
+		.ipv4_addr = "192.168.0.10"
+	};
 
+	qgdb_server.init(conn_info);
+	qgdb_server.begin();
 }

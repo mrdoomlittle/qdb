@@ -3,16 +3,10 @@
 # include <boost/cstdint.hpp>
 # include <boost/asio.hpp>
 # include <boost/thread.hpp>
-
+# include "conn_info_t.hpp"
 namespace mdl { class qgdb_server
 {
 	public:
-	typedef struct {
-		boost::uint16_t portno;
-		char const *ipv4_addr;
-		char const *ipv6_addr;
-	} conn_info_t;
-
 	qgdb_server(boost::asio::io_service& __io_service)
 	: io_service(__io_service) {}
 
