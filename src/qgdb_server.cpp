@@ -1,5 +1,6 @@
 # include "qgdb_server.hpp"
 # include "conn_handler.hpp"
+# include <strcmb.hpp>
 boost::int8_t mdl::qgdb_server::init(conn_info_t __conn_info) {
 	static boost::asio::ip::tcp::endpoint endpoint(
 		boost::asio::ip::address_v4::from_string(__conn_info.ipv4_addr), __conn_info.portno
@@ -25,8 +26,27 @@ boost::int8_t mdl::qgdb_server::begin() {
 	} while(1);
 }
 
+# include <unistd.h>
 void mdl::qgdb_server::set_mem(char const *__name, char const *__value) {
-	printf("mem set, name = %c | value = %c\n", __name[0], __value[0]);
+	char *file_name = strcmb("data/", const_cast<char *>(__name), STRCMB_FREE_NONE);
+
+	if (access(file_name, F_OK) == -1) {
+		fprintf(stderr, "file does not exist, so we cant set anything.\n");
+		std::free(file_name);
+		return;
+	}
+
+	FILE* file = fopen(file_name, "wb");
+
+	std::size_t vallen = strlen(__value);
+
+	fwrite(__value, sizeof(char), vallen, file);
+
+	fclose(file);
+
+	std::free(file_name);
+
+	printf("mem set, name = %s | value = %s\n", __name, __value);
 }
 
 # include <sys/types.h>

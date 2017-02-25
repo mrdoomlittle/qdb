@@ -15,7 +15,7 @@ void mdl::qgdb::conn_handler::handle_memset(boost::asio::ip::tcp::socket *__sock
 
 	std::size_t size = serialize.get_size(&set_info);
 	printf("%d\n", size);
-	serialize.init(size+1);
+	serialize.init(size);
 	serialize | 'w';
 
 	boost::asio::read(*__sock, boost::asio::buffer(serialize.get_serial(), size), any_error);

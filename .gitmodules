@@ -16,3 +16,6 @@
 [submodule "serializer"]
 	path = serializer
 	url = git@github.com:mrdoomlittle/serializer.git
+[submodule "strcmb"]
+	path = strcmb
+	url = git@github.com:mrdoomlittle/strcmb.git
