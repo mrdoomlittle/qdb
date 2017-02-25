@@ -10,8 +10,14 @@
 namespace mdl { namespace qgdb { class conn_handler
 {
 	public:
-	boost::int8_t add(boost::asio::ip::tcp::socket *__sock, qgdb_server *__this);
-	void begin(boost::asio::ip::tcp::socket *__sock, qgdb_server *__this);
+	boost::int8_t add(boost::asio::ip::tcp::socket *__sock);
+	void begin(boost::asio::ip::tcp::socket *__sock);
+
+	void handle_memset(boost::asio::ip::tcp::socket *__sock);
+	void handle_memget(boost::asio::ip::tcp::socket *__sock);
+	void handle_memadd(boost::asio::ip::tcp::socket *__sock);
+
+	qgdb_server *__this;
 } ;
 }
 }

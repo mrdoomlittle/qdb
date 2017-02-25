@@ -15,6 +15,30 @@ boost::int8_t mdl::qgdb_client::init(conn_info_t __conn_info) {
 
 	return 0;
 }
+void mdl::qgdb_client::set_mem(char const *__name, char const *__value) {
+	qgdb::set_info_t set_info = {
+		.mem_namelen = strlen(__name),
+		.mem_valuelen = strlen(__value)
+	};
+
+	boost::system::error_code any_error;
+
+	serializer serialize('\0');
+	std::size_t size = serialize.get_size(&set_info);
+	serialize.init(size);
+
+	serialize | 'r';
+
+	set_info.achieve(serialize);
+	serialize.reset();
+
+	boost::asio::write(*this-> sock, boost::asio::buffer(serialize.get_serial(), size), any_error);
+
+	boost::asio::write(*this-> sock, boost::asio::buffer(__name, set_info.mem_namelen), any_error);
+	boost::asio::write(*this-> sock, boost::asio::buffer(__value, set_info.mem_valuelen), any_error);
+
+	std::free(serialize.get_serial());
+}
 
 boost::int8_t mdl::qgdb_client::begin() {
 	boost::system::error_code any_error;
@@ -35,6 +59,12 @@ boost::int8_t mdl::qgdb_client::begin() {
 	boost::uint8_t instruct_id = 0;
 	do {
 		boost::asio::write(*this-> sock, boost::asio::buffer(&instruct_id, sizeof(boost::uint8_t)), any_error);
+
+		switch(instruct_id) {
+			case 0:
+				this-> set_mem("Hello", "World");
+			break;
+		}
 
 		return 0;
 

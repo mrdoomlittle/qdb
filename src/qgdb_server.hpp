@@ -13,6 +13,10 @@ namespace mdl { class qgdb_server
 	boost::int8_t init(conn_info_t __conn_info);
 	boost::int8_t begin();
 
+	void set_mem(char const *__name, char const *__value);
+	void get_mem();
+	void add_mem();
+
 	private:
 	boost::asio::ip::tcp::endpoint *endpoint;
 	boost::asio::io_service& io_service;
