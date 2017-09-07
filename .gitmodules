@@ -19,3 +19,6 @@
 [submodule "strcmb"]
 	path = strcmb
 	url = git@github.com:mrdoomlittle/strcmb.git
+[submodule "mdlerr"]
+	path = mdlerr
+	url = git@github.com:mrdoomlittle/mdlerr.git
