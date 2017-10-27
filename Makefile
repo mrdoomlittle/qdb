@@ -1,6 +1,7 @@
 INC=-Imdlerr/inc
-OBJS=user.o qdb.o m.o
+OBJS=user.o qdb.o m.o d.o
 all: clean
+	gcc -c -std=gnu11 $(INC) -o d.o d.c
 	gcc -c -std=gnu11 $(INC) -o m.o m.c
 	gcc -c -std=gnu11 $(INC) -o user.o user.c
 	gcc -c -std=gnu11 $(INC) -o qdb.o qdb.c
@@ -8,4 +9,4 @@ all: clean
 	gcc -std=gnu11 $(INC) -o server server.c $(OBJS) -lpthread
 	gcc -std=gnu11 $(INC) -o client client.c $(OBJS) -lpthread
 clean:
-	rm -f *.o
+	rm -f *.o client server main
